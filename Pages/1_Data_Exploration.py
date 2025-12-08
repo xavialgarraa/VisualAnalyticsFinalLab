@@ -6,18 +6,13 @@ import seaborn as sns
 from sklearn.preprocessing import LabelEncoder
 from math import pi
 
-# -------------------------
-# Page Configuration
-# -------------------------
 st.set_page_config(
     page_title="Student Dropout – Ultimate Explorer",
     page_icon="🎓",
     layout="wide",
 )
 
-# -------------------------
-# Load and preprocess data
-# -------------------------
+
 @st.cache_data
 def load_data():
     df = pd.read_csv("student_dropout.csv")
@@ -35,9 +30,7 @@ def load_data():
 
 df = load_data()
 
-# -------------------------
-# Sidebar: Advanced Filters
-# -------------------------
+
 st.sidebar.header("🎛️ Filter Dataset")
 st.sidebar.write("Refine your student cohort below:")
 
@@ -151,9 +144,6 @@ if len(f) == 0:
     st.error("⚠️ No students match the selected filters. Please relax your filters in the sidebar.")
     st.stop()
 
-# -------------------------
-# Main Dashboard
-# -------------------------
 
 st.title("🎓 Student Dropout Analytics Dashboard")
 st.markdown(f"""
@@ -161,7 +151,7 @@ st.markdown(f"""
 **Current Dropout Rate:** <span style='color:red; font-size:1.2em; font-weight:bold'>{f['Dropped_Out_Int'].mean()*100:.1f}%</span>
 """, unsafe_allow_html=True)
 
-# KPI Row
+
 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
 kpi1.metric("Total Students", len(f))
 kpi2.metric("Dropouts", f[f['Dropped_Out_Int']==1].shape[0])
@@ -171,10 +161,6 @@ kpi5.metric("Avg Failures", f"{f['Number_of_Failures'].mean():.2f}")
 
 st.divider()
 
-# -------------------------
-# TABS STRUCTURE
-# -------------------------
-# REORDERED TABS AS REQUESTED
 tab_data, tab_explore, tab_corr, tab_deep = st.tabs([
     "📂 Data & Distributions", 
     "📊 Features vs Target",
@@ -182,14 +168,11 @@ tab_data, tab_explore, tab_corr, tab_deep = st.tabs([
     "🔍 Strategic Insights"
 ])
 
-# =========================================
-# TAB 1: Data & Distributions (NEW)
-# =========================================
+
 with tab_data:
     st.header("Dataset Overview")
     st.write("Review the raw data and the general distribution of variables (Univariate Analysis).")
     
-    # 1. Show Dataframe
     with st.expander("👀 View Raw Dataframe", expanded=False):
         st.dataframe(f, use_container_width=True)
     
@@ -266,9 +249,7 @@ with tab_data:
             axes_grid[i].set_title(col, fontsize=9)
         plt.tight_layout()
         st.pyplot(fig_grid)
-# =========================================
-# TAB 2: Feature Explorer (General)
-# =========================================
+
 with tab_explore:
     st.header("Feature Analysis (vs Target)")
     st.write("Explore how specific variables relate to **Dropout**.")
@@ -312,22 +293,17 @@ with tab_explore:
             ax_stack.set_ylabel(col)
             ax_stack.legend(title="Dropped Out", bbox_to_anchor=(1.05, 1), loc='upper left')
             
-            # Annotate
             for c in ax_stack.containers:
                 ax_stack.bar_label(c, fmt='%.0f%%', label_type='center', color='black')
                 
             st.pyplot(fig_stack)
 
-# =========================================
-# TAB 4: Correlation Matrix (Improved)
-# =========================================
 
 with tab_corr:
 
     st.header("Correlation Analysis")
     st.write("What relates most strongly with dropout?")
 
-    # --- Encoding ---
     f_enc = f.copy()
     for c in f_enc.select_dtypes(include='object').columns:
         le = LabelEncoder()
@@ -336,10 +312,8 @@ with tab_corr:
     if 'Dropped_Out' in f_enc.columns:
         f_enc = f_enc.drop(columns=['Dropped_Out'])
 
-    # Raw correlation
     corr = f_enc.corr()
 
-    # ---- Controls ----
 
     # Threshold
     thresh = st.slider(
@@ -381,12 +355,10 @@ with tab_corr:
         index=0
     )
 
-    # ---- Output information ----
 
     st.subheader("Top Variables (sorted by correlation)")
     st.dataframe(target_c.to_frame("Abs Corr w/ Dropout").head(15))
 
-    # ---- Heatmap ----
     if len(vars_user) >= 2:
         fig_c, ax_c = plt.subplots(figsize=(10, 8))
         sns.heatmap(
@@ -401,9 +373,7 @@ with tab_corr:
     else:
         st.warning("Please select at least two variables to build the matrix.")
 
-# =========================================
-# TAB 4: Strategic Insights 
-# =========================================
+
 with tab_deep:
     st.header("🚀 Strategic Deep Dive: The 'Why' Behind Dropout")
     st.markdown("""
@@ -411,14 +381,12 @@ with tab_deep:
     This section visualizes how these critical factors interact to increase risk.
     """)
 
-    # --- SECTION 1: THE ACADEMIC SPIRAL (Failures) ---
     st.subheader("1. The 'Failure Trap' (Correlation: +0.38)")
     st.write("The strongest predictor of dropout is the number of past class failures. The risk is not linear; it compounds exponentially.")
     
     c1, c2 = st.columns([2, 1])
     
     with c1:
-        # Combined Line & Bar Chart for Impact
         fail_data = f.groupby('Number_of_Failures')['Dropped_Out_Int'].agg(['mean', 'count']).reset_index()
         fail_data.columns = ['Failures', 'Dropout_Rate', 'Student_Count']
         
@@ -434,7 +402,6 @@ with tab_deep:
         ax2.set_ylabel("Dropout Probability", color='#D9534F')
         ax2.set_ylim(0, 1.1)
         
-        # Annotate
         for i, txt in enumerate(fail_data['Dropout_Rate']):
             ax2.text(i, txt + 0.05, f"{txt*100:.0f}%", ha='center', color='#D9534F', fontweight='bold')
             
@@ -456,14 +423,12 @@ with tab_deep:
 
     st.divider()
 
-    # --- SECTION 2: INSTITUTIONAL & GEOGRAPHIC FACTORS (School & Address) ---
     st.subheader("2. Institutional & Environmental Context (Correlation: +0.30)")
     st.write("The data shows a significant disparity between schools and residence types. Is the environment creating barriers?")
 
     c3, c4 = st.columns(2)
     
     with c3:
-        # Interaction between School and Address
         st.markdown("**Dropout Rate by School & Residence**")
         fig_env, ax_env = plt.subplots()
         
@@ -504,7 +469,6 @@ with tab_deep:
 
     st.divider()
 
-    # --- SECTION 3: MOTIVATION & PARENTAL SUPPORT ---
     st.subheader("3. The 'Ambition Buffer' (Correlation: -0.31)")
     st.write("Desire for higher education is the strongest *negative* correlation, meaning it acts as a shield against dropout.")
 
@@ -512,12 +476,10 @@ with tab_deep:
 
     with c5:
         st.markdown("**Impact of Higher Ed Goals**")
-        # Simple donut chart or bar
         goal_rate = f.groupby('Wants_Higher_Education')['Dropped_Out_Int'].mean() * 100
         
         fig_goal, ax_goal = plt.subplots(figsize=(4, 4))
-        colors = ['#ff9999','#66b3ff'] # Red for No desire, Blue for Yes desire
-        # Use simple bar for clarity
+        colors = ['#ff9999','#66b3ff'] 
         sns.barplot(x=goal_rate.index, y=goal_rate.values, palette=["#D9534F", "#5BC0DE"], ax=ax_goal)
         ax_goal.set_ylabel("Dropout Rate (%)")
         ax_goal.set_xlabel("Wants Higher Edu?")
@@ -530,7 +492,6 @@ with tab_deep:
 
         fig_complex, ax_complex = plt.subplots(figsize=(8, 4))
 
-        # Interaction: Study Time vs Ambition vs Dropout
         sns.lineplot(
             data=f,
             x='Study_Time',
@@ -558,68 +519,3 @@ with tab_deep:
         )
 
 
-# =========================================
-    st.header("The 'Persona' Comparison")
-    st.write("Compare the average habits and personality traits of students who drop out vs. those who stay.")
-
-    col_radar, col_info = st.columns([2, 1])
-
-    with col_radar:
-        # Prepare Data for Radar Plot
-        features_radar = ['Family_Relationship', 'Free_Time', 'Going_Out', 
-                          'Weekend_Alcohol_Consumption', 'Weekday_Alcohol_Consumption', 'Health_Status']
-        
-        # Calculate means for both groups
-        radar_df = f.groupby('Dropped_Out')[features_radar].mean().reset_index()
-        
-        # Function to draw radar chart
-        def make_radar(df_radar, categories):
-            N = len(categories)
-            angles = [n / float(N) * 2 * pi for n in range(N)]
-            angles += angles[:1] # Close the loop
-            
-            fig, ax = plt.subplots(figsize=(6, 6), subplot_kw={'projection': 'polar'})
-            
-            # Draw one axe per variable + labels
-            plt.xticks(angles[:-1], categories, color='grey', size=8)
-            
-            # Draw ylabels
-            ax.set_rlabel_position(0)
-            plt.yticks([1, 2, 3, 4, 5], ["1", "2", "3", "4", "5"], color="grey", size=7)
-            plt.ylim(0, 5)
-            
-            # Plot data
-            # Group 0: No Dropout (Blue)
-            if False in df_radar['Dropped_Out'].values:
-                values0 = df_radar[df_radar['Dropped_Out']==False][categories].values.flatten().tolist()
-                values0 += values0[:1]
-                ax.plot(angles, values0, linewidth=1, linestyle='solid', label="Stays (False)", color="blue")
-                ax.fill(angles, values0, 'blue', alpha=0.1)
-            
-            # Group 1: Dropout (Red)
-            if True in df_radar['Dropped_Out'].values:
-                values1 = df_radar[df_radar['Dropped_Out']==True][categories].values.flatten().tolist()
-                values1 += values1[:1]
-                ax.plot(angles, values1, linewidth=1, linestyle='solid', label="Drops Out (True)", color="red")
-                ax.fill(angles, values1, 'red', alpha=0.1)
-                
-            plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
-            return fig
-
-        if len(radar_df) > 0:
-            st.pyplot(make_radar(radar_df, features_radar))
-        else:
-            st.warning("Not enough data to generate radar chart.")
-
-    with col_info:
-        st.info(
-            """
-            **How to read this chart:**
-            - **Center (0):** Very Low
-            - **Outer Edge (5):** Very High
-            
-            **Patterns to look for:**
-            - Does the **Red shape** stretch more towards *Alcohol* or *Going Out*?
-            - Does the **Blue shape** stretch more towards *Family Relationship* or *Health*?
-            """
-        )
