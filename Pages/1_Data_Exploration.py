@@ -54,46 +54,88 @@ def radio_yes_no_both(label, column_name, key_prefix):
 
 # --- 1. Demographics ---
 with st.sidebar.expander("👤 Demographics", expanded=True):
-    sel_school = radio_three("School", df["School"].unique(), "school_f")
-    sel_gender = radio_three("Gender", df["Gender"].unique(), "gender_f")
-    sel_address = radio_three("Address (Urban/Rural)", df["Address"].unique(), "address_f")
-    sel_famsize = radio_three("Family Size", df["Family_Size"].unique(), "famsize_f")
-    sel_pstatus = radio_three("Parental Status", df["Parental_Status"].unique(), "pstatus_f")
-    
-    age_range = st.sidebar.slider("Age Range", int(df["Age"].min()), int(df["Age"].max()), (int(df["Age"].min()), int(df["Age"].max())))
+    sel_school = st.selectbox("School", ["All"] + sorted(df["School"].unique().tolist()))
+    sel_school_values = df["School"].unique() if sel_school == "All" else [sel_school]
+
+    sel_gender = st.selectbox("Gender", ["All"] + sorted(df["Gender"].unique().tolist()))
+    sel_gender_values = df["Gender"].unique() if sel_gender == "All" else [sel_gender]
+
+    sel_address = st.selectbox("Address (Urban/Rural)", ["All"] + sorted(df["Address"].unique().tolist()))
+    sel_address_values = df["Address"].unique() if sel_address == "All" else [sel_address]
+
+    sel_famsize = st.selectbox("Family Size", ["All"] + sorted(df["Family_Size"].unique().tolist()))
+    sel_famsize_values = df["Family_Size"].unique() if sel_famsize == "All" else [sel_famsize]
+
+    sel_pstatus = st.selectbox("Parental Status", ["All"] + sorted(df["Parental_Status"].unique().tolist()))
+    sel_pstatus_values = df["Parental_Status"].unique() if sel_pstatus == "All" else [sel_pstatus]
+
+    age_range = st.slider(
+        "Age Range",
+        int(df["Age"].min()),
+        int(df["Age"].max()),
+        (int(df["Age"].min()), int(df["Age"].max()))
+    )
 
 # --- 2. Academic & Support ---
 with st.sidebar.expander("📚 Academic & Support", expanded=False):
-    sel_schoolsup = radio_yes_no_both("School Support", "School_Support", "schoolsup")
-    sel_famsup = radio_yes_no_both("Family Support", "Family_Support", "famsup")
-    sel_paid = radio_yes_no_both("Extra Paid Class", "Extra_Paid_Class", "paid")
-    sel_higher = radio_yes_no_both("Wants Higher Edu", "Wants_Higher_Education", "higher")
-    sel_internet = radio_yes_no_both("Internet Access", "Internet_Access", "internet")
-    
-    study_range = st.sidebar.slider("Weekly Study Time (1-4)", int(df["Study_Time"].min()), int(df["Study_Time"].max()), (1, 4))
-    absences_range = st.sidebar.slider("Absences", int(df["Number_of_Absences"].min()), int(df["Number_of_Absences"].max()), (0, 93))
-    failures_range = st.sidebar.slider("Past Failures", int(df["Number_of_Failures"].min()), int(df["Number_of_Failures"].max()), (0, 3))
+    sel_schoolsup = st.selectbox("School Support", ["All"] + sorted(df["School_Support"].unique().tolist()))
+    sel_schoolsup_values = df["School_Support"].unique() if sel_schoolsup == "All" else [sel_schoolsup]
+
+    sel_famsup = st.selectbox("Family Support", ["All"] + sorted(df["Family_Support"].unique().tolist()))
+    sel_famsup_values = df["Family_Support"].unique() if sel_famsup == "All" else [sel_famsup]
+
+    sel_paid = st.selectbox("Extra Paid Class", ["All"] + sorted(df["Extra_Paid_Class"].unique().tolist()))
+    sel_paid_values = df["Extra_Paid_Class"].unique() if sel_paid == "All" else [sel_paid]
+
+    sel_higher = st.selectbox("Wants Higher Education", ["All"] + sorted(df["Wants_Higher_Education"].unique().tolist()))
+    sel_higher_values = df["Wants_Higher_Education"].unique() if sel_higher == "All" else [sel_higher]
+
+    sel_internet = st.selectbox("Internet Access", ["All"] + sorted(df["Internet_Access"].unique().tolist()))
+    sel_internet_values = df["Internet_Access"].unique() if sel_internet == "All" else [sel_internet]
+
+    study_range = st.slider(
+        "Weekly Study Time (1-4)",
+        int(df["Study_Time"].min()),
+        int(df["Study_Time"].max()),
+        (1, 4)
+    )
+
+    absences_range = st.slider(
+        "Absences",
+        int(df["Number_of_Absences"].min()),
+        int(df["Number_of_Absences"].max()),
+        (0, 93)
+    )
+
+    failures_range = st.slider(
+        "Past Failures",
+        int(df["Number_of_Failures"].min()),
+        int(df["Number_of_Failures"].max()),
+        (0, 3)
+    )
 
 # --- 3. Lifestyle & Family ---
 with st.sidebar.expander("🏠 Lifestyle & Family", expanded=False):
-    sel_romantic = radio_yes_no_both("In Relationship", "In_Relationship", "romantic")
-    sel_goout = st.sidebar.slider("Going Out (1-5)", 1, 5, (1, 5))
-    sel_walc = st.sidebar.slider("Weekend Alcohol (1-5)", 1, 5, (1, 5))
-    sel_health = st.sidebar.slider("Health Status (1-5)", 1, 5, (1, 5))
+    sel_romantic = st.selectbox("In Relationship", ["All"] + sorted(df["In_Relationship"].unique().tolist()))
+    sel_romantic_values = df["In_Relationship"].unique() if sel_romantic == "All" else [sel_romantic]
+
+    sel_goout = st.slider("Going Out (1-5)", 1, 5, (1, 5))
+    sel_walc = st.slider("Weekend Alcohol (1-5)", 1, 5, (1, 5))
+    sel_health = st.slider("Health Status (1-5)", 1, 5, (1, 5))
 
 # --- Apply Filters ---
 mask = (
-    df["School"].isin(sel_school) &
-    df["Gender"].isin(sel_gender) &
-    df["Address"].isin(sel_address) &
-    df["Family_Size"].isin(sel_famsize) &
-    df["Parental_Status"].isin(sel_pstatus) &
-    df["School_Support"].isin(sel_schoolsup) &
-    df["Family_Support"].isin(sel_famsup) &
-    df["Extra_Paid_Class"].isin(sel_paid) &
-    df["Wants_Higher_Education"].isin(sel_higher) &
-    df["Internet_Access"].isin(sel_internet) &
-    df["In_Relationship"].isin(sel_romantic) &
+    df["School"].isin(sel_school_values) &
+    df["Gender"].isin(sel_gender_values) &
+    df["Address"].isin(sel_address_values) &
+    df["Family_Size"].isin(sel_famsize_values) &
+    df["Parental_Status"].isin(sel_pstatus_values) &
+    df["School_Support"].isin(sel_schoolsup_values) &
+    df["Family_Support"].isin(sel_famsup_values) &
+    df["Extra_Paid_Class"].isin(sel_paid_values) &
+    df["Wants_Higher_Education"].isin(sel_higher_values) &
+    df["Internet_Access"].isin(sel_internet_values) &
+    df["In_Relationship"].isin(sel_romantic_values) &
     (df["Age"].between(age_range[0], age_range[1])) &
     (df["Study_Time"].between(study_range[0], study_range[1])) &
     (df["Number_of_Absences"].between(absences_range[0], absences_range[1])) &
@@ -133,12 +175,11 @@ st.divider()
 # TABS STRUCTURE
 # -------------------------
 # REORDERED TABS AS REQUESTED
-tab_data, tab_explore, tab_corr, tab_deep, tab_profile = st.tabs([
+tab_data, tab_explore, tab_corr, tab_deep = st.tabs([
     "📂 Data & Distributions", 
     "📊 Features vs Target",
     "🔗 Correlation Matrix",
-    "🔍 Strategic Insights",  
-    "🧠 Behavioral Profile (Radar)"
+    "🔍 Strategic Insights"
 ])
 
 # =========================================
@@ -518,9 +559,6 @@ with tab_deep:
 
 
 # =========================================
-# TAB 5: Behavioral Profile (Radar Chart) 
-# =========================================
-with tab_profile:
     st.header("The 'Persona' Comparison")
     st.write("Compare the average habits and personality traits of students who drop out vs. those who stay.")
 
