@@ -7,9 +7,6 @@ import streamlit.components.v1 as components
 import pickle
 from pandas.api.types import is_numeric_dtype
 
-# -------------------------
-# CONFIG STREAMLIT
-# -------------------------
 st.set_page_config(
     page_title="Student Dropout – Model Explainability",
     page_icon="🎓",
@@ -21,7 +18,7 @@ st.write(
     """
     Welcome to the **model explainability** section for the *Student Dropout Risk Predictor*.
 
-    On this page you can understand **how the model works** and **why** it predicts a 
+    On this page you can understand **how the Dropout Predictor Model works** and **why** it predicts a 
     certain dropout risk for a given student, using **SHAP (SHapley Additive exPlanations)** values.
 
     You can explore:
@@ -31,18 +28,11 @@ st.write(
     """
 )
 st.divider()
-
-# -------------------------
-# LOAD MODEL
-# -------------------------
 with open("dropout_model.pkl", "rb") as file:
     data = pickle.load(file)
 
 model_loaded = data["model"]
 
-# -------------------------
-# FEATURES (same as 2_Dropout_Predictor)
-# -------------------------
 feature_cols = [
     "School",
     "Gender",
@@ -76,9 +66,6 @@ feature_cols = [
     "Number_of_Absences",
 ]
 
-# -------------------------
-# METADATA (labels + help) – same estil que 2_Dropout_Predictor
-# -------------------------
 feature_info = {
     'School': {'label': "School", 'help': "Name/code of the school attended."},
     'Gender': {'label': "Gender", 'help': "M for Male and F for Female."},
@@ -112,9 +99,6 @@ feature_info = {
     'Number_of_Absences': {'label': "Number of absences", 'help': "Total absences from school."}
 }
 
-# -------------------------
-# LOAD & ENCODE DATASET (USED AS TEST SET FOR SHAP)
-# -------------------------
 df_raw = pd.read_csv("student_dropout.csv")
 
 df_num = df_raw.copy()
@@ -139,9 +123,6 @@ if "X_test" not in globals():
     st.error("The dataset `X_test` is not available. Please define or load it before using this page.")
     st.stop()
 
-# -------------------------
-# HELPERS (reuse style of 2_Dropout_Predictor)
-# -------------------------
 def input_for_feature(col_name: str, key: str):
     """
     Generic input control for a feature:
@@ -191,9 +172,7 @@ def encode_for_model(answers: dict) -> pd.DataFrame:
     X_sample = pd.DataFrame([sample_list], columns=feature_cols)
     return X_sample
 
-# -------------------------
-# SHAP INTRODUCTION
-# -------------------------
+# INTRODUCTION
 st.subheader("SHAP Explainer")
 st.write(
     """
@@ -225,9 +204,8 @@ avg_risk_pred = float(np.mean(y_pred_all))
 st.metric("Average predicted dropout risk in the dataset", f"{avg_risk_pred * 100:.1f}%")
 st.divider()
 
-# -------------------------
+
 # GLOBAL EXPLAINABILITY
-# -------------------------
 st.subheader("Global Explainability")
 gcol1, gcol2 = st.columns(2)
 
@@ -257,109 +235,80 @@ with gcol2:
     shap.summary_plot(shap_values, X_test, plot_type="bar", show=False)
     st.pyplot(fig2)
 
-# -------------------------
+
 # FEATURE-WISE SCATTER PLOTS
-# -------------------------
 st.subheader("Feature-wise SHAP scatter plots")
 st.write(
     """
-    These plots show how the SHAP value (impact on dropout risk) changes with the 
-    feature value for some key variables:
-    - **Study_Time**
-    - **Number_of_Failures**
-    - **Number_of_Absences**
+    Select a feature to see how its value changes the **SHAP value** (impact on dropout risk)
+    across all students in the dataset.
     """
 )
 
-fcol1, fcol2, fcol3 = st.columns(3)
+selected_scatter_feature = st.selectbox(
+    "Choose a feature to inspect",
+    options=feature_cols,
+    index=feature_cols.index("Number_of_Failures") if "Number_of_Failures" in feature_cols else 0,
+    help="This feature will be on the x-axis, SHAP value on the y-axis."
+)
 
-with fcol1:
-    if "Study_Time" in X_test.columns:
-        st.write("#### SHAP vs Study_Time")
-        plt.figure()
-        shap.plots.scatter(shap_values[:, "Study_Time"], show=False)
-        fig_s = plt.gcf()
-        st.pyplot(fig_s)
-        plt.close(fig_s)
-    else:
-        st.info("Column 'Study_Time' not found in X_test.")
+if selected_scatter_feature in X_test.columns:
+    st.write(f"#### SHAP vs {selected_scatter_feature}")
+    plt.figure()
+    shap.plots.scatter(shap_values[:, selected_scatter_feature], show=False)
+    fig_feat = plt.gcf()
+    st.pyplot(fig_feat)
+    plt.close(fig_feat)
+else:
+    st.info(f"Column '{selected_scatter_feature}' not found in X_test.")
 
-with fcol2:
-    if "Number_of_Failures" in X_test.columns:
-        st.write("#### SHAP vs Number_of_Failures")
-        plt.figure()
-        shap.plots.scatter(shap_values[:, "Number_of_Failures"], show=False)
-        fig_f = plt.gcf()
-        st.pyplot(fig_f)
-        plt.close(fig_f)
-    else:
-        st.info("Column 'Number_of_Failures' not found in X_test.")
-
-with fcol3:
-    if "Number_of_Absences" in X_test.columns:
-        st.write("#### SHAP vs Number_of_Absences")
-        plt.figure()
-        shap.plots.scatter(shap_values[:, "Number_of_Absences"], show=False)
-        fig_a = plt.gcf()
-        st.pyplot(fig_a)
-        plt.close(fig_a)
-    else:
-        st.info("Column 'Number_of_Absences' not found in X_test.")
-
-# -------------------------
 # DEPENDENCE PLOTS WITH INTERACTIONS
-# -------------------------
 st.subheader("Dependence plots with interactions")
 st.write(
     """
-    Dependence plots reveal **non-linear effects** and interactions.  
-    Here we inspect how:
-    - **Number_of_Failures** interacts with **Study_Time**
-    - **Number_of_Absences** interacts with **Study_Time**
+    The following plot helps to see **non-linear effects** and **interactions** between two fetures, which you can choose:
+    - One feature will be on the **x-axis**.
+    - The other feature will be used as the **interaction feature** (colour / second dimension).
     """
 )
 
-dcol1, dcol2 = st.columns(2)
+dep_col1, dep_col2 = st.columns(2)
 
-with dcol1:
-    if {"Number_of_Failures", "Study_Time"}.issubset(X_test.columns):
-        st.write("#### Number_of_Failures vs Study_Time interaction")
-        plt.figure()
-        shap.dependence_plot(
-            "Number_of_Failures",
-            shap_values.values,
-            X_test,
-            interaction_index="Study_Time",
-            show=False,
-        )
-        fig_dep1 = plt.gcf()
-        st.pyplot(fig_dep1)
-        plt.close(fig_dep1)
-    else:
-        st.info("Columns 'Number_of_Failures' and/or 'Study_Time' not found in X_test.")
+with dep_col1:
+    dep_feat_x = st.selectbox(
+        "Feature on x-axis",
+        options=feature_cols,
+        index=feature_cols.index("Number_of_Failures") if "Number_of_Failures" in feature_cols else 0,
+        help="Main feature whose SHAP value you want to inspect."
+    )
 
-with dcol2:
-    if {"Number_of_Absences", "Study_Time"}.issubset(X_test.columns):
-        st.write("#### Number_of_Absences vs Study_Time interaction")
-        plt.figure()
-        shap.dependence_plot(
-            "Number_of_Absences",
-            shap_values.values,
-            X_test,
-            interaction_index="Study_Time",
-            show=False,
-        )
-        fig_dep2 = plt.gcf()
-        st.pyplot(fig_dep2)
-        plt.close(fig_dep2)
-    else:
-        st.info("Columns 'Number_of_Absences' and/or 'Study_Time' not found in X_test.")
+with dep_col2:
+    dep_feat_interaction = st.selectbox(
+        "Interaction feature (colour)",
+        options=feature_cols,
+        index=feature_cols.index("Study_Time") if "Study_Time" in feature_cols else 1,
+        help="Feature used as interaction_index, usually shown as colour."
+    )
+
+if {dep_feat_x, dep_feat_interaction}.issubset(X_test.columns):
+    st.write(f"#### Dependence plot: {dep_feat_x} with interaction {dep_feat_interaction}")
+    plt.figure()
+    shap.dependence_plot(
+        dep_feat_x,
+        shap_values.values,
+        X_test,
+        interaction_index=dep_feat_interaction,
+        show=False,
+    )
+    fig_dep = plt.gcf()
+    st.pyplot(fig_dep)
+    plt.close(fig_dep)
+else:
+    st.info("Selected features not found in X_test.")
 
 st.divider()
 
-# -------------------------
 # LOCAL EXPLAINABILITY
-# -------------------------
 st.subheader("Local Explainability")
 st.write(
     """
@@ -399,7 +348,7 @@ has_last_pred = (
 use_test_set = False
 use_manual = False
 
-# --------- OPTION 1: LAST PREDICTED STUDENT (FROM PREDICTOR PAGE) ---------
+# LAST PREDICTED STUDENT
 if mode == "Explain your last predicted student (from Dropout Predictor)":
     if has_last_pred:
         X_explain = st.session_state["explain_X_encoded"]
@@ -419,7 +368,7 @@ if mode == "Explain your last predicted student (from Dropout Predictor)":
         )
         use_test_set = True
 
-# --------- OPTION 2: PICK A STUDENT FROM THE DATASET ---------
+# STUDENT FROM THE DATASET 
 elif mode == "Pick a student from the dataset":
     use_test_set = True
 
@@ -435,7 +384,6 @@ if use_test_set and mode != "Enter a new student manually":
 
     X_explain = X_test.iloc[[instance_index]]
 
-    # Build a human-readable version using categorical mappings
     X_explain_display = X_explain.copy()
     for col in cat_mappings:
         try:
@@ -456,7 +404,7 @@ if use_test_set and mode != "Enter a new student manually":
 
     st.info(f"You are explaining **student #{instance_index} from the dataset**.")
 
-# --------- OPTION 3: ENTER A NEW STUDENT MANUALLY ---------
+# NEW STUDENT MANUALLY
 if mode == "Enter a new student manually":
     use_manual = True
     st.info("Fill in the fields below to define a new student profile, then click **Explain this student**.")
@@ -586,13 +534,10 @@ if mode == "Enter a new student manually":
         shap_values_explain = explainer(X_explain)
         shap_row = shap_values_explain[0]
     else:
-        # Encara no hi ha res a explicar fins que es premi el botó
         X_explain_display = None
         y_explain_pred = None
 
-# -------------------------
-# SHOW SELECTED STUDENT + METRIC
-# -------------------------
+# SHOW SELECTED STUDENT
 if X_explain_display is not None and y_explain_pred is not None:
     st.write("### Selected student features")
     st.dataframe(X_explain_display)
@@ -603,9 +548,7 @@ if X_explain_display is not None and y_explain_pred is not None:
 else:
     st.stop()
 
-# -------------------------
 # WATERFALL PLOT
-# -------------------------
 st.subheader("SHAP Waterfall plot")
 st.write(
     """
@@ -621,9 +564,7 @@ with st.spinner("Rendering waterfall plot..."):
     st.pyplot(fig_w)
     plt.close(fig_w)
 
-# -------------------------
 # FORCE PLOT
-# -------------------------
 st.subheader("SHAP Force plot")
 st.write(
     """
@@ -641,9 +582,7 @@ with st.spinner("Rendering force plot..."):
     force_html = f"<head>{shap.getjs()}</head><body>{force_plot.html()}</body>"
     components.html(force_html, height=220, scrolling=True)
 
-# -------------------------
 # DECISION PLOT
-# -------------------------
 st.subheader("SHAP Decision plot")
 st.write(
     """
