@@ -133,12 +133,11 @@ st.divider()
 # TABS STRUCTURE
 # -------------------------
 # REORDERED TABS AS REQUESTED
-tab_data, tab_explore, tab_corr, tab_deep, tab_profile = st.tabs([
+tab_data, tab_explore, tab_corr, tab_deep = st.tabs([
     "📂 Data & Distributions", 
     "📊 Features vs Target",
     "🔗 Correlation Matrix",
-    "🔍 Strategic Insights",  
-    "🧠 Behavioral Profile (Radar)"
+    "🔍 Strategic Insights"
 ])
 
 # =========================================
@@ -518,9 +517,6 @@ with tab_deep:
 
 
 # =========================================
-# TAB 5: Behavioral Profile (Radar Chart) 
-# =========================================
-with tab_profile:
     st.header("The 'Persona' Comparison")
     st.write("Compare the average habits and personality traits of students who drop out vs. those who stay.")
 
