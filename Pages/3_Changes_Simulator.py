@@ -5,16 +5,11 @@ import pickle
 import altair as alt
 from pandas.api.types import is_numeric_dtype
 
-# --- CONFIG ---
 st.set_page_config(
-    page_title="Policy Impact Simulator",
-    page_icon="🏛️",
+    page_title="Changes Impact Simulator",
+    page_icon="⚙️",
     layout="wide",
 )
-
-# -------------------------
-# LOAD MODEL
-# -------------------------
 try:
     with open("dropout_model.pkl", "rb") as file:
         data = pickle.load(file)
@@ -26,9 +21,6 @@ except Exception as e:
     st.error(f"Error loading model: {e}")
     st.stop()
 
-# -------------------------
-# FEATURES
-# -------------------------
 feature_cols = [
     "School",
     "Gender",
@@ -62,9 +54,7 @@ feature_cols = [
     "Number_of_Absences",
 ]
 
-# -------------------------
 # METADATA
-# -------------------------
 feature_info = {
     'School': {'label': "School", 'help': "Name/code of the school attended."},
     'Gender': {'label': "Gender", 'help': "M for Male and F for Female."},
@@ -98,9 +88,6 @@ feature_info = {
     'Number_of_Absences': {'label': "Number of absences", 'help': "Total absences from school."}
 }
 
-# -------------------------
-# LOAD & ENCODE DATASET
-# -------------------------
 try:
     df_raw = pd.read_csv("student_dropout.csv")
 except FileNotFoundError:
@@ -121,9 +108,6 @@ for col in feature_cols:
 typical_values = {col: df_num[col].median() for col in feature_cols}
 X_test = df_num[feature_cols].copy()
 
-# -------------------------
-# HELPERS
-# -------------------------
 def input_for_feature(col_name: str, key: str):
     info = feature_info[col_name]
     label = info['label']
@@ -151,7 +135,6 @@ def input_for_feature(col_name: str, key: str):
             help=help_text
         )
 
-
 def encode_for_model(answers: dict) -> pd.DataFrame:
     sample_list = []
     for col in feature_cols:
@@ -165,15 +148,11 @@ def encode_for_model(answers: dict) -> pd.DataFrame:
     X_sample = pd.DataFrame([sample_list], columns=feature_cols)
     return X_sample
 
-
 def encode_and_predict(answers: dict) -> float:
     X_sample = encode_for_model(answers)
     y = model_loaded.predict(X_sample)[0]
     return float(y)
 
-# -------------------------
-# BANNED FEATURES
-# -------------------------
 banned_features = {
     'Gender',
     'Age',
@@ -189,9 +168,6 @@ banned_features = {
     'Reason_for_Choosing_School',
 }
 
-# -------------------------
-# POLICY CATEGORY GROUPS
-# -------------------------
 policy_categories = {
     "Personal changes": [
         "Study_Time",
@@ -220,9 +196,6 @@ policy_categories = {
     ],
 }
 
-# -------------------------
-# NUMERIC FEATURES WHERE MAX/MIN IS "GOOD"
-# -------------------------
 good_high = {
     "Study_Time",
     "Health_Status",
@@ -239,9 +212,6 @@ good_low = {
     "Going_Out",
 }
 
-# -------------------------
-# SCHOLARSHIP DESCRIPTIONS
-# -------------------------
 scholarship_details = {
     "School support scholarship": {
         "what": "Financial support to provide structured tutoring or remedial lessons inside the school.",
@@ -261,9 +231,6 @@ scholarship_details = {
     },
 }
 
-# -------------------------
-# SESSION STATE INITIALISATION
-# -------------------------
 if "policy_mode" not in st.session_state:
     st.session_state["policy_mode"] = "Use your last predicted student (from Dropout Predictor)"
 
@@ -279,28 +246,28 @@ if "policy_source_description" not in st.session_state:
 if "policy_reset_sliders" not in st.session_state:
     st.session_state["policy_reset_sliders"] = False
 
-# -------------------------
-# APP TITLE & INTRO
-# -------------------------
-st.title("🏛️ Policy Impact Simulator")
+st.title("⚙️ Changes Impact Simulator")
 st.write(
     """
-    This page allows you to **simulate concrete policy actions** for a single student and see how
-    those actions might change their **predicted dropout risk**.
+    This tool allows you to analyse how **specific changes**
+    could influence a student's **predicted dropout risk**.
 
-    - **Step 1:** Select the student profile (from your last prediction, from the dataset, or by entering it manually).  
-    - **Step 2:** Explore **Personal**, **Family** and **School** changes and see how each one affects the risk.  
-    - **Step 3:** Check which **scholarships** the system would suggest, based on missing support.  
-    - **Step 4:** Use the **Recommendations** section to focus on the changes and scholarships that are estimated
-      to reduce dropout risk by **more than 10%**.
+    - You can start by selecting or defining a **student profile**.  
+    - The simulator then shows how different **Personal**, **Family**, and **School** changes would impact the student's probability of dropping out.  
+    - A dedicated section highlights **scholarships** that may be relevant based on missing
+      support in the student’s current context.  
+    - Finally, the **Recommendations** area summarises the most impactful actions. Including
+      those that **strongly reduce risk** and those that should be **avoided because they increase it**.
+      You can also adjust a **threshold (%)** to decide which changes count as high-impact.
+
+    Overall, the Changes Impact Simulator provides a **decision-support environment** for evaluating
+    realistic interventions and understanding their potential consequences for a specific student.
     """
 )
 st.divider()
 
-# -------------------------
-# 1. STUDENT SELECTION
-# -------------------------
-st.header("1. Select the student to simulate policies for")
+# STUDENT SELECTION
+st.header("1. Select the student to simulate changes for")
 
 col_m1, col_m2, col_m3 = st.columns(3)
 
@@ -338,14 +305,14 @@ new_base_risk = None
 new_source_desc = ""
 updated_base = False
 
-# OPTION 1: LAST PREDICTED
+# LAST PREDICTED
 if mode == "Use your last predicted student (from Dropout Predictor)":
     if has_last_pred:
         X_explain_display = st.session_state["explain_X_display"]
         new_base_risk = float(st.session_state["explain_y_pred"])
         new_base_student = X_explain_display.iloc[0].to_dict()
         new_source_desc = (
-            "You are simulating policies for the **last student you predicted** "
+            "You are simulating changes for the **last student you predicted** "
             "in the Dropout Predictor page."
         )
         updated_base = True
@@ -355,7 +322,7 @@ if mode == "Use your last predicted student (from Dropout Predictor)":
             "Please predict a student there first, or use one of the other options."
         )
 
-# OPTION 2: DATASET
+# DATASET
 if mode == "Pick a student from the dataset":
     instance_index = st.slider(
         "Select a student index from the dataset",
@@ -384,14 +351,14 @@ if mode == "Pick a student from the dataset":
 
     new_base_risk = float(model_loaded.predict(X_row)[0])
     new_base_student = X_display.iloc[0].to_dict()
-    new_source_desc = f"You are simulating policies for **student #{instance_index} from the dataset**."
+    new_source_desc = f"You are simulating changes for **student #{instance_index} from the dataset**."
     updated_base = True
 
-# OPTION 3: MANUAL
+# MANUAL
 if mode == "Enter a new student manually":
     st.info(
         "Fill in the fields below to define a new student profile, then click "
-        "**Use this student for policy simulation**."
+        "**Use this student for change simulation**."
     )
 
     with st.form("policy_manual_student_form"):
@@ -477,7 +444,7 @@ if mode == "Enter a new student manually":
             internet = input_for_feature("Internet_Access", "pol_man_internet")
             absences = input_for_feature("Number_of_Absences", "pol_man_absences")
 
-        submitted = st.form_submit_button("Use this student for policy simulation")
+        submitted = st.form_submit_button("Use this student for change simulation")
 
     if submitted:
         manual_inputs = {
@@ -514,10 +481,9 @@ if mode == "Enter a new student manually":
         }
         new_base_student = manual_inputs
         new_base_risk = encode_and_predict(manual_inputs)
-        new_source_desc = "You are simulating policies for a **manually entered student profile**."
+        new_source_desc = "You are simulating changes for a **manually entered student profile**."
         updated_base = True
 
-# UPDATE BASE STUDENT
 if updated_base and new_base_student is not None and new_base_risk is not None:
     prev_student = st.session_state["policy_base_student"]
     changed_student = (prev_student != new_base_student)
@@ -532,10 +498,9 @@ base_risk = st.session_state["policy_base_risk"]
 source_description = st.session_state["policy_source_description"]
 
 if base_student is None or base_risk is None:
-    st.info("Please select or define a student profile to start the policy simulation.")
+    st.info("Please select or define a student profile to start the change simulation.")
     st.stop()
 
-# Reset sliders when student changes
 if st.session_state.get("policy_reset_sliders", False):
     for col in feature_cols:
         key = f"policy_slider_{col}"
@@ -543,9 +508,7 @@ if st.session_state.get("policy_reset_sliders", False):
             del st.session_state[key]
     st.session_state["policy_reset_sliders"] = False
 
-# -------------------------
-# SHOW SELECTED STUDENT + BASE RISK
-# -------------------------
+# SHOW SELECTED STUDENT
 st.info(source_description)
 
 st.subheader("Selected student profile")
@@ -577,20 +540,17 @@ box(
 st.markdown(
     """
     A higher value means a higher probability that this student will **drop out**.  
-    Policy changes below show how modifying a single factor could increase or decrease
+    Changes below show how modifying a single factor could increase or decrease
     this risk.
     """
 )
 
 st.divider()
 
-# -------------------------
-# SCHOLARSHIP LOGIC
-# -------------------------
+# SCHOLARSHIP
 def _is_negative(val) -> bool:
     s = str(val).strip().lower()
     return s in {"no", "none", "0", "without", "absent", "nan", "false"}
-
 
 def compute_scholarships(student: dict, base_risk: float):
     """
@@ -602,38 +562,37 @@ def compute_scholarships(student: dict, base_risk: float):
 
     We also estimate the risk reduction if the scholarship is granted.
     """
-    scholarships = []
+    scholarships_local = []
 
     if "School_Support" in student and _is_negative(student["School_Support"]):
-        scholarships.append({
+        scholarships_local.append({
             "Scholarship": "School support scholarship",
             "Feature": "School_Support",
             "Reason": "The student does not receive extra school support."
         })
 
     if "Internet_Access" in student and _is_negative(student["Internet_Access"]):
-        scholarships.append({
+        scholarships_local.append({
             "Scholarship": "Digital access scholarship",
             "Feature": "Internet_Access",
             "Reason": "The student does not have home internet access."
         })
 
     if "Extra_Paid_Class" in student and _is_negative(student["Extra_Paid_Class"]):
-        scholarships.append({
+        scholarships_local.append({
             "Scholarship": "Private tutoring scholarship",
             "Feature": "Extra_Paid_Class",
             "Reason": "The student does not attend extra paid classes."
         })
 
     if "Family_Support" in student and _is_negative(student["Family_Support"]):
-        scholarships.append({
+        scholarships_local.append({
             "Scholarship": "Family education support scholarship",
             "Feature": "Family_Support",
             "Reason": "The family does not provide educational support."
         })
 
-    # Compute impact for each scholarship
-    for sch in scholarships:
+    for sch in scholarships_local:
         feat = sch["Feature"]
         best_new_risk = None
         best_cat = None
@@ -658,20 +617,17 @@ def compute_scholarships(student: dict, base_risk: float):
             sch["New_risk"] = None
             sch["Risk_change_pct"] = None
 
-    return scholarships
-
+    return scholarships_local
 
 scholarships = compute_scholarships(base_student, base_risk)
 
-# -------------------------
-# 2. POLICY CHANGES
-# -------------------------
+# 2. POLICY CHANGES 
 st.header("2. Policy changes (what-if analysis for each feature)")
 st.write(
     """
-    Below you can explore policy changes for all **non-banned features**, grouped by who
+    Below you can explore changes for all **non-banned features**, grouped by who
     would need to act: **Personal changes, Family changes and School changes**.  
-    - Each card corresponds to a **policy lever** (support programme, lifestyle change, etc.).  
+    - Each card corresponds to a **change lever** (support programme, lifestyle change, etc.).  
     - The card shows **what happens if we change this variable** for the selected student.  
     - Moving sliders or testing categories **never modifies the base student profile**; the model
       always uses a **copy** for the predictions.
@@ -679,7 +635,7 @@ st.write(
 )
 
 
-def render_policy_panel(col_name: str, student_base: dict, base_risk: float):
+def render_policy_panel(col_name: str, student_base: dict, base_risk_val: float):
     info = feature_info.get(col_name, {'label': col_name, 'help': ""})
     nice_name = info['label']
     help_text = info['help']
@@ -700,7 +656,7 @@ def render_policy_panel(col_name: str, student_base: dict, base_risk: float):
             ua = student_base.copy()
             ua[col_name] = cat
             r = encode_and_predict(ua)
-            delta = r - base_risk
+            delta = r - base_risk_val
             risk_pct = r * 100
             delta_pct = delta * 100
 
@@ -750,7 +706,7 @@ def render_policy_panel(col_name: str, student_base: dict, base_risk: float):
     )
 
     if abs(new_val - cur_float) < 1e-9:
-        r = base_risk
+        r = base_risk_val
         risk_pct = r * 100
         st.metric("New dropout risk", f"{risk_pct:.1f}%")
         st.caption("no change (same value)")
@@ -758,7 +714,7 @@ def render_policy_panel(col_name: str, student_base: dict, base_risk: float):
         ua = student_base.copy()
         ua[col_name] = new_val
         r = encode_and_predict(ua)
-        delta = r - base_risk
+        delta = r - base_risk_val
         risk_pct = r * 100
         delta_pct = delta * 100
 
@@ -792,12 +748,9 @@ for cat_name, cat_feats in policy_categories.items():
         with cols[idx % 4]:
             render_policy_panel(feat, base_student, base_risk)
 
-# ---------- DIVIDER BEFORE SCHOLARSHIPS ----------
 st.divider()
 
-# -------------------------
-# 3. Scholarships
-# -------------------------
+# Scholarships
 st.header("3. Scholarships")
 if not scholarships:
     st.info(
@@ -808,9 +761,8 @@ else:
     st.write(
         """
         Based on the current profile, the following **scholarships** are recommended because the student
-        is missing key forms of support (`school support`, `internet`, `extra paid classes` or `family educational support`).  
-        Each card below explains **what the scholarship is**, **how it would be used**, and a qualitative
-        indication of its **potential impact** on dropout risk.
+        is missing key forms of support.  
+        Each card below explains **what the scholarship is** and **how it would be used**.
         """
     )
     n = len(scholarships)
@@ -847,33 +799,53 @@ else:
                     "**Estimated impact on dropout risk:** not enough data to estimate the effect."
                 )
 
-# -------------------------
-# 4. Recommendations (changes & scholarships with impact > 10%)
-# -------------------------
+# Recommendations 
 st.divider()
 st.header("4. Recommendations")
+
 st.write(
     """
-    This section highlights **policy changes and scholarships** that are estimated to reduce
-    dropout risk by **more than 10%** (absolute reduction) for this student.
+    This section summarises the **strongest simulated actions** for this student, based on their
+    impact on predicted dropout risk. The actions are grouped into two categories:
+
+    - **Actions that reduce dropout risk**: changes or scholarships that clearly lower the risk.  
+    - **Actions that increase dropout risk (to avoid)**: changes that would make the situation worse,
+      and therefore should be avoided when designing interventions.
     """
 )
 
-recommendation_cards = []
+threshold = st.slider(
+    "Minimum absolute change in dropout risk to show an action (%)",
+    min_value=0.1,
+    max_value=50.0,
+    value=10.0,
+    step=0.1,
+)
 
-# --- Scholarships with strong impact (risk reduction > 10%) ---
+st.write(
+    f"""
+    Only actions whose predicted effect has an **absolute impact of at least {threshold:.1f}%**
+    (either a decrease or an increase in dropout risk) are displayed below.  
+    This helps you focus on the most **relevant and impactful** changes for this specific student.
+    """
+)
+
+
+reduce_cards = []
+increase_cards = []
+
+# SCHOLARSHIPS
 for sch in scholarships:
     rc = sch.get("Risk_change_pct")
-    if rc is not None and rc > 10.0:
-        recommendation_cards.append(
-            {
-                "type": "scholarship",
-                "obj": sch,
-            }
-        )
+    if rc is None:
+        continue
+    if rc >= threshold:
+        reduce_cards.append({"type": "scholarship", "obj": sch})
+    elif rc <= -threshold:
+        increase_cards.append({"type": "scholarship", "obj": sch})
 
-# --- Policy changes: simulate all concrete changes and keep those with risk reduction > 10% ---
-summary_rows = []
+# POLICY CHANGES
+policy_change_rows = []
 
 for col_name in feature_cols:
     if col_name in banned_features:
@@ -883,7 +855,7 @@ for col_name in feature_cols:
     cur_val = base_student[col_name]
     cur_risk = base_risk
 
-    # CATEGORICAL FEATURES
+    # Categorical
     if col_name in cat_mappings:
         for cat in cat_mappings[col_name]:
             if cat == cur_val:
@@ -892,34 +864,29 @@ for col_name in feature_cols:
             ua = base_student.copy()
             ua[col_name] = cat
             new_risk = encode_and_predict(ua)
-            change_pct = (cur_risk - new_risk) * 100.0  # positive = risk reduction
+            change_pct = (cur_risk - new_risk) * 100.0
 
-            if change_pct > 10.0:
-                summary_rows.append(
+            if abs(change_pct) >= threshold:
+                policy_change_rows.append(
                     {
                         "Feature": feat_label,
-                        "Change": f'{feat_label}: {cur_val} → {cat}',
-                        "Risk change (%)": change_pct,
+                        "Change": f"If you change the {feat_label}: {cur_val} → {cat}, then:",
+                        "Risk_change_pct": change_pct,
                         "New_risk": new_risk,
                     }
                 )
 
-    # NUMERIC FEATURES
+    # Numeric
     else:
         col_min = float(df_num[col_name].min())
         col_max = float(df_num[col_name].max())
         cur_float = float(cur_val)
 
         targets = []
-
         if col_name in good_low:
             targets.append(("min (good)", col_min))
-
         if col_name in good_high:
             targets.append(("max (good)", col_max))
-
-        if not targets:
-            continue
 
         for tag, target in targets:
             if abs(target - cur_float) < 1e-9:
@@ -930,82 +897,110 @@ for col_name in feature_cols:
             new_risk = encode_and_predict(ua)
             change_pct = (cur_risk - new_risk) * 100.0
 
-            if change_pct > 10.0:
-                summary_rows.append(
+            if abs(change_pct) >= threshold:
+                policy_change_rows.append(
                     {
                         "Feature": feat_label,
-                        "Change": f'{feat_label}: {cur_float:.1f} → {target:.1f} ({tag})',
-                        "Risk change (%)": change_pct,
+                        "Change": f"If you change the {feat_label}: {cur_float:.1f} → {target:.1f} ({tag}), then:",
+                        "Risk_change_pct": change_pct,
                         "New_risk": new_risk,
                     }
                 )
 
-# Add policy changes to recommendation cards
-for row in summary_rows:
-    recommendation_cards.append(
-        {
-            "type": "change",
-            "obj": row,
-        }
-    )
+for row in policy_change_rows:
+    rc = row["Risk_change_pct"]
+    if rc >= threshold:
+        reduce_cards.append({"type": "change", "obj": row})
+    elif rc <= -threshold:
+        increase_cards.append({"type": "change", "obj": row})
 
-if not recommendation_cards:
-    st.info(
-        "There are no scholarships or policy changes with an estimated dropout risk reduction above 10% for this student."
-    )
+# REDUCE RISK
+st.subheader("4.1 Actions that reduce dropout risk")
+
+if not reduce_cards:
+    st.info(f"No actions reduce dropout risk by ≥ {threshold:.1f}%.")
 else:
-    st.write(
-        """
-        These **scholarships and policy changes** are estimated to have a **strong impact**
-        (more than **10%** risk reduction).  
-        Each card shows the recommended action and the new predicted dropout risk.
-        """
-    )
-    n = len(recommendation_cards)
-    n_cols = 2 if n > 1 else 1
-    cols = st.columns(n_cols)
+    n = len(reduce_cards)
+    cols = st.columns(2 if n > 1 else 1)
 
-    for i, rec in enumerate(recommendation_cards):
-        col = cols[i % n_cols]
+    for i, rec in enumerate(reduce_cards):
+        col = cols[i % 2]
         with col:
+
+            # Scholarship
             if rec["type"] == "scholarship":
                 sch = rec["obj"]
                 name = sch["Scholarship"]
-                desc = scholarship_details.get(name, {})
-                what = desc.get("what", "Scholarship programme aimed at reducing structural barriers.")
-                use = desc.get("use", "Used to support the student with targeted resources and services.")
-                new_risk = sch.get("New_risk", base_risk)
-                base_pct = base_risk * 100.0
-                new_pct = new_risk * 100.0
+                new_pct = sch["New_risk"] * 100
+                base_pct = base_risk * 100
                 delta_pct = new_pct - base_pct
 
-                st.markdown(f"### 🎯 Scholarship recommendation: {name}")
-                st.markdown(f"**Why recommended:** {sch['Reason']}")
-                st.markdown(f"**What it is:** {what}")
-                st.markdown(f"**How it is used:** {use}")
+                st.markdown(f"### 🎯 Scholarship: {name}")
+                st.markdown(sch["Reason"])
                 st.metric(
-                    "Estimated dropout risk after scholarship",
+                    "Estimated dropout risk",
                     f"{new_pct:.1f}%",
                     delta=f"{delta_pct:+.1f} %",
                     delta_color="inverse",
                 )
 
+            # Policy change
             else:
                 row = rec["obj"]
-                change_desc = row["Change"]
-                new_risk = row["New_risk"]
-                base_pct = base_risk * 100.0
-                new_pct = new_risk * 100.0
+                new_pct = row["New_risk"] * 100
+                base_pct = base_risk * 100
                 delta_pct = new_pct - base_pct
 
-                st.markdown("### 🔧 Policy change recommendation")
-                st.markdown(f"**Change:** {change_desc}")
-                st.markdown(
-                    "This represents a concrete modification in the student's context or behaviour "
-                    "that the school, the family or the student could implement."
-                )
+                st.markdown("### 🔧 Policy change")
+                st.markdown(row["Change"])
                 st.metric(
-                    "Estimated dropout risk after this change",
+                    "Estimated dropout risk",
+                    f"{new_pct:.1f}%",
+                    delta=f"{delta_pct:+.1f} %",
+                    delta_color="inverse",
+                )
+
+# INCREASE RISK 
+st.subheader("4.2 Actions that increase dropout risk (to avoid)")
+
+if not increase_cards:
+    st.info(f"No actions increase dropout risk by ≥ {threshold:.1f}%.")
+else:
+    n = len(increase_cards)
+    cols = st.columns(2 if n > 1 else 1)
+
+    for i, rec in enumerate(increase_cards):
+        col = cols[i % 2]
+        with col:
+
+            # Scholarship
+            if rec["type"] == "scholarship":
+                sch = rec["obj"]
+                name = sch["Scholarship"]
+                new_pct = sch["New_risk"] * 100
+                base_pct = base_risk * 100
+                delta_pct = new_pct - base_pct
+
+                st.markdown(f"### ⚠️ Scholarship concern: {name}")
+                st.markdown(sch["Reason"])
+                st.metric(
+                    "Estimated dropout risk",
+                    f"{new_pct:.1f}%",
+                    delta=f"{delta_pct:+.1f} %",
+                    delta_color="normal",
+                )
+
+            # Policy change
+            else:
+                row = rec["obj"]
+                new_pct = row["New_risk"] * 100
+                base_pct = base_risk * 100
+                delta_pct = new_pct - base_pct
+
+                st.markdown("### ⚠️ Policy change that increases risk")
+                st.markdown(row["Change"])
+                st.metric(
+                    "Estimated dropout risk",
                     f"{new_pct:.1f}%",
                     delta=f"{delta_pct:+.1f} %",
                     delta_color="inverse",

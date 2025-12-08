@@ -4,24 +4,17 @@ import numpy as np
 import pickle
 from pandas.api.types import is_numeric_dtype
 
-# -------------------------
-# CONFIG STREAMLIT
-# -------------------------
 st.set_page_config(
     page_title="Student Dropout Risk Predictor",
     page_icon="🎓",
     layout="wide",
 )
 
-# -------------------------
-# LOAD MODEL
-# -------------------------
 with open('dropout_model.pkl', 'rb') as file:
     data = pickle.load(file)
 
 model_loaded = data["model"]
 
-# FEATURE COLS (30 columnes, sense Grade_1, Grade_2, Final_Grade)
 feature_cols = [
     'School',
     'Gender',
@@ -55,9 +48,7 @@ feature_cols = [
     'Number_of_Absences'
 ]
 
-# -------------------------
 # METADADES DE FEATURES (labels + help)
-# -------------------------
 feature_info = {
     'School': {'label': "School", 'help': None},
     'Gender': {'label': "Gender", 'help': "M for Male and F for Female."},
@@ -91,14 +82,8 @@ feature_info = {
     'Number_of_Absences': {'label': "Number of absences", 'help': "Total absences from school."}
 }
 
-# -------------------------
-# LOAD DATASET
-# -------------------------
-df_raw = pd.read_csv("student_dropout.csv")
 
-# -------------------------
-# NUMÈRIC + MAPPINGS
-# -------------------------
+df_raw = pd.read_csv("student_dropout.csv")
 df_num = df_raw.copy()
 cat_mappings = {}
 
@@ -112,9 +97,6 @@ for col in feature_cols:
 
 typical_values = {col: df_num[col].median() for col in feature_cols}
 
-# -------------------------
-# HELPERS
-# -------------------------
 def input_for_feature(col_name: str, key: str):
     info = feature_info[col_name]
     label = info['label']
@@ -155,7 +137,6 @@ def encode_and_predict(answers: dict) -> float:
     X_sample = pd.DataFrame([sample_list], columns=feature_cols)
     return float(model_loaded.predict(X_sample)[0])
 
-# Labels per als botons
 button_labels = {
     'School': "Change the student's school",
     'Address': "Change the student's address",
@@ -177,9 +158,6 @@ button_labels = {
     'Number_of_Absences': "Change number of absences"
 }
 
-# -------------------------
-# UI
-# -------------------------
 st.title("Student Dropout Risk Predictor 🎓")
 st.write("""Welcome to the Student Dropout Risk section. Enter the following Personal, 
             Familiar and Academic information about the student to estimate his/her dropout risk.""")
@@ -269,7 +247,6 @@ with col_s2:
     
 st.divider()
 
-# ---------- CONSTRUIR current_inputs AMB TOTS ELS VALORS ACTUALS ----------
 current_inputs = {
     'School': school,
     'Gender': gender,
@@ -303,7 +280,6 @@ current_inputs = {
     'Number_of_Absences': absences
 }
 
-# ---------- SI HAN CANVIAT INPUTS DES DE L'ÚLTIMA PREDICCIÓ, MARQUEM PREDICCIÓ COM OBSOLETA ----------
 last_inputs = st.session_state.get("last_inputs")
 if last_inputs is not None and last_inputs != current_inputs:
     for key in [
@@ -316,7 +292,7 @@ if last_inputs is not None and last_inputs != current_inputs:
     ]:
         st.session_state.pop(key, None)
 
-# ------------- BOTÓ DE PREDICCIÓ -------------
+# BOTÓ DE PREDICCIÓ
 if st.button("Predict Dropout Risk"):
     try:
         user_answers = current_inputs.copy()
@@ -344,12 +320,11 @@ if st.button("Predict Dropout Risk"):
     except Exception as e:
         st.error(f"Error during prediction: {e}")
 
-# ------------- RESULTATS + WHAT-IF NOMÉS SI LA PREDICCIÓ ESTÀ AL DIA -------------
+# RESULTATS + WHAT-IF 
 if "base_risk" in st.session_state and "base_answers" in st.session_state:
     y_pred = st.session_state["base_risk"]
     user_answers = st.session_state["base_answers"]
 
-    # Mostrar sempre com a percentatge
     base_pct = y_pred * 100
 
     st.subheader("Predicted Dropout Risk")
@@ -381,7 +356,6 @@ if "base_risk" in st.session_state and "base_answers" in st.session_state:
         'Reason_for_Choosing_School'
     }
 
-    # --- BOTONS EN DUES COLUMNES, CADA UN DINS D'UN CONTAINER ---
     col_b1, col_b2 = st.columns(2)
     button_cols = [col_b1, col_b2]
 
@@ -407,14 +381,13 @@ if "base_risk" in st.session_state and "base_answers" in st.session_state:
 
     active_feature = st.session_state.get("whatif_feature")
 
-    # Panel del what-if just sota el botó actiu
     if active_feature is not None and active_feature in containers:
         col = active_feature
         cur_val = user_answers[col]
         nice_name = feature_info.get(col, {}).get("label", col)
 
         with containers[col]:
-            # ---------- CATEGÒRIQUES ----------
+            # CATEGÒRIQUES
             if col in cat_mappings:
                 for cat in cat_mappings[col]:
                     if cat == cur_val:
@@ -446,7 +419,7 @@ if "base_risk" in st.session_state and "base_answers" in st.session_state:
                             delta_color="inverse"
                         )
 
-            # ---------- NUMÈRIQUES ----------
+            # NUMÈRIQUES
             else:
                 cur_float = float(cur_val)
                 col_min = float(df_num[col].min())
@@ -494,5 +467,27 @@ if "base_risk" in st.session_state and "base_answers" in st.session_state:
                                 delta=f"{delta_pct:+.1f} %",
                                 delta_color="inverse"
                             )
+    st.markdown(
+        """
+        <div style="
+            background-color: #e7f0ff;
+            padding: 18px;
+            border-radius: 8px;
+            border-left: 5px solid #5b9bff;
+            font-size: 16px;
+            ">
+            <strong>Want to explore deeper?</strong><br>
+            You can use the <em>Changes Impact Simulator</em> to analyse how 
+            different policies, interventions, or lifestyle adjustments could influence 
+            this student's dropout risk.  
+            It provides a more advanced scenario analysis with grouped changes, 
+            scholarships, and recommendations based on predicted impact.
+            <br><br>
+            👉 <strong>Go to the “Changes Impact Simulator” page to investigate more possibilities.</strong>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 else:
     st.info("Set the student profile and click **Predict Dropout Risk** to see what-if analysis.")
