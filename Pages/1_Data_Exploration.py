@@ -469,123 +469,63 @@ st.divider()
 st.subheader("📈 Distributions")
 st.write("To understand the data, we must first know the distribution of the features.")
 
-st.write("### Numeric distributions")
-num1, num2 = st.columns(2)
-with num1:
-    st.write("#### Age distribution")
-    age_chart = (
-        alt.Chart(f)
-        .mark_bar()
-        .encode(
-            x=alt.X("Age", bin=alt.Bin(maxbins=30), title="Age"),
-            y="count()"
-        )
-        .properties(height=300)
-    )
-    st.altair_chart(age_chart, use_container_width=True)
+# Identify numeric and categorical features
+numeric_cols = [col for col in f.columns if (pd.api.types.is_numeric_dtype(f[col])) and (col != "Dropped_Out")]
+categorical_cols = [
+    col for col in f.columns
+    if (not pd.api.types.is_numeric_dtype(f[col])) or col == "Dropped_Out"
+]
 
-with num2:
-    st.write("#### Number of absences distribution")
-    abs_chart = (
-        alt.Chart(f)
-        .mark_bar()
-        .encode(
-            x=alt.X("Number_of_Absences", bin=alt.Bin(maxbins=30), title="Number of absences"),
-            y="count()"
-        )
-        .properties(height=300)
-    )
-    st.altair_chart(abs_chart, use_container_width=True)
 
-num3, num4 = st.columns(2)
-with num3:
-    st.write("#### Study time distribution (1–4)")
-    study_chart = (
-        alt.Chart(f)
-        .mark_bar()
-        .encode(
-            x=alt.X("Study_Time", bin=alt.Bin(maxbins=4), title="Study time (1–4)"),
-            y="count()"
-        )
-        .properties(height=300)
-    )
-    st.altair_chart(study_chart, use_container_width=True)
+# Numeric distributions (expander) – ALL numeric features
+with st.expander("Numeric distributions", expanded=False):
+    st.write("Histograms for all numeric features in the filtered dataset.")
+    if len(numeric_cols) == 0:
+        st.info("No numeric features available.")
+    else:
+        for i in range(0, len(numeric_cols), 2):
+            cols = st.columns(2)
+            for j in range(2):
+                if i + j < len(numeric_cols):
+                    colname = numeric_cols[i + j]
+                    with cols[j]:
+                        st.write(f"#### {colname} distribution")
+                        chart = (
+                            alt.Chart(f)
+                            .mark_bar()
+                            .encode(
+                                x=alt.X(f"{colname}:O", title=colname),
+                                y="count()"
+                            )
+                            .properties(height=300)
+                        )
+                        st.altair_chart(chart, use_container_width=True)
 
-with num4:
-    st.write("#### Health status distribution (1–5)")
-    health_chart = (
-        alt.Chart(f)
-        .mark_bar()
-        .encode(
-            x=alt.X("Health_Status", bin=alt.Bin(maxbins=5), title="Health status (1–5)"),
-            y="count()"
-        )
-        .properties(height=300)
-    )
-    st.altair_chart(health_chart, use_container_width=True)
-
-st.write("### Categorical distributions")
-cat1, cat2 = st.columns(2)
-with cat1:
-    st.write("#### Gender distribution")
-    gender_chart = (
-        alt.Chart(f)
-        .mark_bar()
-        .encode(
-            x=alt.X("Gender", sort="-y", title="Gender"),
-            y="count()",
-            color=alt.Color("Gender", legend=None),
-            tooltip=["Gender", "count()"]
-        )
-        .properties(height=300)
-    )
-    st.altair_chart(gender_chart, use_container_width=True)
-
-with cat2:
-    st.write("#### School distribution")
-    school_chart = (
-        alt.Chart(f)
-        .mark_bar()
-        .encode(
-            x=alt.X("School", sort="-y", title="School"),
-            y="count()",
-            color=alt.Color("School", legend=None),
-            tooltip=["School", "count()"]
-        )
-        .properties(height=300)
-    )
-    st.altair_chart(school_chart, use_container_width=True)
-
-cat3, cat4 = st.columns(2)
-with cat3:
-    st.write("#### Internet access distribution")
-    internet_chart = (
-        alt.Chart(f)
-        .mark_bar()
-        .encode(
-            x=alt.X("Internet_Access", sort="-y", title="Internet access"),
-            y="count()",
-            color=alt.Color("Internet_Access", legend=None),
-            tooltip=["Internet_Access", "count()"]
-        )
-        .properties(height=300)
-    )
-    st.altair_chart(internet_chart, use_container_width=True)
-
-with cat4:
-    st.write("#### Wants higher education distribution")
-    higher_chart = (
-        alt.Chart(f)
-        .mark_bar()
-        .encode(
-            x=alt.X("Wants_Higher_Education", sort="-y", title="Wants higher education"),
-            y="count()",
-            color=alt.Color("Wants_Higher_Education", legend=None),
-            tooltip=["Wants_Higher_Education", "count()"]
-        )
-        .properties(height=300)
-    )
-    st.altair_chart(higher_chart, use_container_width=True)
+# Categorical distributions (expander) – ALL categorical features
+with st.expander("Categorical distributions", expanded=False):
+    st.write("Bar charts for all categorical features in the filtered dataset.")
+    if len(categorical_cols) == 0:
+        st.info("No categorical features available.")
+    else:
+        for i in range(0, len(categorical_cols), 2):
+            cols = st.columns(2)
+            for j in range(2):
+                if i + j < len(categorical_cols):
+                    colname = categorical_cols[i + j]
+                    with cols[j]:
+                        st.write(f"#### {colname} distribution")
+                        cat_chart = (
+                            alt.Chart(f)
+                            .mark_bar()
+                            .encode(
+                                x=alt.X(colname, sort="-y", title=colname),
+                                y="count()",
+                                color=alt.Color(colname, legend=None),
+                                tooltip=[colname, "count()"]
+                            )
+                            .properties(height=300)
+                        )
+                        st.altair_chart(cat_chart, use_container_width=True)
 
 # -------------------------
 # Dropout rate by category
@@ -745,19 +685,22 @@ for j in range(i + 1, n_rows * n_cols):
 fig.tight_layout()
 st.pyplot(fig)
 
+
 # -------------------------
 # Correlation matrix
 # -------------------------
 st.divider()
 st.subheader("Correlation Matrix")
 st.write(
-    """Here you can see the correlation matrix among all the features (after encoding categorical variables). 
-    It is important to focus on the **Dropped_Out** row or column to see its correlation with the features."""
+    """Here you can see the correlation matrix (after encoding categorical variables). 
+    It is important to focus on the **Dropped_Out** row or column to see its correlation with the features.
+    As default it only shows the features with at least +/-0.15 correlation with Dropped_Out, but feel free
+    to add/remove fetures with the filter."""
 )
 
+# Copy and encode categorical variables
 fcm = f.copy()
 
-# Encode categorical variables
 for col in fcm.columns:
     if fcm[col].dtype == "object":
         le = LabelEncoder()
@@ -765,8 +708,33 @@ for col in fcm.columns:
     elif fcm[col].dtype == "bool":
         fcm[col] = fcm[col].astype(int)
 
-corr = fcm.corr().round(2)
-fig, ax = plt.subplots(figsize=(8, 6))
-sns.heatmap(corr, vmin=-1, vmax=1, annot=True, cmap="icefire", ax=ax)
-ax.set_title("Correlation Heatmap", fontsize=10)
-st.pyplot(fig)
+# Compute full correlation matrix
+full_corr = fcm.corr().round(3)
+
+# Preselect features with |corr| >= 0.15 with Dropped_Out
+threshold = 0.15
+initial_features = (
+    full_corr.index[full_corr["Dropped_Out"].abs() >= threshold].tolist()
+)
+
+# Ensure Dropped_Out is included
+if "Dropped_Out" not in initial_features:
+    initial_features.insert(0, "Dropped_Out")
+
+# Multiselect for choosing features
+selected_features_corr = st.multiselect(
+    "Select features to include in the correlation matrix:",
+    options=list(full_corr.columns),
+    default=initial_features,
+    help="Only features with correlation ≥ 0.15 with Dropped_Out are shown initially."
+)
+
+# Display correlation heatmap
+if len(selected_features_corr) < 2:
+    st.warning("Please select at least two features to display the correlation matrix.")
+else:
+    corr = full_corr.loc[selected_features_corr, selected_features_corr]
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sns.heatmap(corr, vmin=-1, vmax=1, annot=True, cmap="icefire", ax=ax)
+    ax.set_title("Correlation Heatmap", fontsize=10)
+    st.pyplot(fig)
